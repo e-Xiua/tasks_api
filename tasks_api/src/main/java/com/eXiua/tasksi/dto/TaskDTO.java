@@ -7,6 +7,7 @@ import com.eXiua.tasksi.model.TaskPriority;
 import com.eXiua.tasksi.model.TasksStatus;
 
 public class TaskDTO {
+
     public Long id;
     public String title;
     public String description;

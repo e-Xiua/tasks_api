@@ -102,7 +102,7 @@ public class TaskServiceImpl implements TaskService {
             if (project != null) preds.add(cb.equal(root.get("project"), project));
             if (dueFrom != null) preds.add(cb.greaterThanOrEqualTo(root.get("dueDate"), dueFrom));
             if (dueTo != null) preds.add(cb.lessThanOrEqualTo(root.get("dueDate"), dueTo));
-            return cb.and(preds.toArray(new Predicate[0]));
+            return cb.and(preds.toArray(Predicate[]::new));
         };
 
         Page<Task> page = taskRepository.findAll(spec, pageable);
@@ -111,17 +111,95 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public Object kpis() {
-        // Ejemplo simple: contar por estado
-        long total = taskRepository.count();
-        long todo = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "TODO"));
-        long inprogress = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "IN_PROGRESS"));
-        long done = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "DONE"));
-        java.util.Map<String, Long> result = new java.util.HashMap<>();
-        result.put("totalTasks", total);
-        result.put("todoTasks", todo);
-        result.put("inProgressTasks", inprogress);
-        result.put("doneTasks", done);
-        return result;
-    }
+public Object kpis() {
+    java.util.Map<String, Object> result = new java.util.HashMap<>();
+
+    // --- GENERAL ---
+    long total = taskRepository.count();
+    long todo = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "TODO"));
+    long inprogress = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "IN_PROGRESS"));
+    long done = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "DONE"));
+
+    double completionRate = total > 0 ? (double) done / total * 100 : 0.0;
+
+    java.util.Map<String, Object> general = new java.util.HashMap<>();
+    general.put("totalTasks", total);
+    general.put("todoTasks", todo);
+    general.put("inProgressTasks", inprogress);
+    general.put("doneTasks", done);
+    general.put("completionRate", completionRate);
+    result.put("general", general);
+
+    // --- PERFORMANCE ---
+    LocalDate today = LocalDate.now();
+    long overdueTasks = taskRepository.count((root, query, cb) ->
+        cb.and(
+            cb.lessThan(root.get("dueDate"), today),
+            cb.notEqual(root.get("status"), "DONE")
+        )
+    );
+
+    Double avgProgress = taskRepository.findAll().stream()
+        .filter(t -> t.getProgress() != null)
+        .mapToDouble(Task::getProgress)
+        .average().orElse(0.0);
+
+    // Calcular tareas completadas a tiempo y promedio de días hasta completarse
+    List<Task> doneTasks = taskRepository.findAll((root, query, cb) ->
+        cb.equal(root.get("status"), "DONE")
+    );
+    long onTimeCount = doneTasks.stream()
+        .filter(t -> t.getDueDate() != null && t.getDueDate().isAfter(today.minusDays(1)))
+        .count();
+    double onTimeRate = done > 0 ? (double) onTimeCount / done * 100 : 0.0;
+
+    double avgCompletionDays = doneTasks.stream()
+        .filter(t -> t.getCreatedAt() != null && t.getUpdatedAt() != null)
+        .mapToLong(t -> java.time.temporal.ChronoUnit.DAYS.between(t.getCreatedAt(), t.getUpdatedAt()))
+        .average().orElse(0.0);
+
+    java.util.Map<String, Object> performance = new java.util.HashMap<>();
+    performance.put("overdueTasks", overdueTasks);
+    performance.put("onTimeRate", onTimeRate);
+    performance.put("avgProgress", avgProgress);
+    performance.put("avgCompletionTimeDays", avgCompletionDays);
+    result.put("performance", performance);
+
+    // --- DISTRIBUTION ---
+    java.util.Map<String, Long> tasksByPriority = taskRepository.findAll().stream()
+        .collect(Collectors.groupingBy(
+            t -> t.getPriority() == null ? "UNKNOWN" : t.getPriority().toString(),
+            Collectors.counting()
+        ));
+
+    java.util.Map<String, Long> tasksByProject = taskRepository.findAll().stream()
+        .filter(t -> t.getProject() != null)
+        .collect(Collectors.groupingBy(Task::getProject, Collectors.counting()));
+
+    java.util.Map<String, Object> distribution = new java.util.HashMap<>();
+    distribution.put("tasksByPriority", tasksByPriority);
+    distribution.put("tasksByProject", tasksByProject);
+    result.put("distribution", distribution);
+
+    // --- RECENT ---
+    List<java.util.Map<String, Object>> recentTasks = doneTasks.stream()
+        .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
+        .limit(5)
+        .map(t -> {
+            java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("id", t.getId());
+            m.put("title", t.getTitle());
+            m.put("dueDate", t.getDueDate());
+            return m;
+        })
+        .collect(Collectors.toList());
+
+    java.util.Map<String, Object> recent = new java.util.HashMap<>();
+    recent.put("recentlyCompletedTasks", recentTasks);
+    result.put("recent", recent);
+
+    return result;
+}
+
+    
 }

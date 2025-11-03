@@ -8,8 +8,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // Permitir llamadas desde el dev server de Angular
         registry.addMapping("/api/**")
-                .allowedOrigins("*") // cambiar a dominio front en producción
-                .allowedMethods("GET","POST","PUT","DELETE","OPTIONS");
+                .allowedOrigins("http://localhost:4200")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
     }
 }

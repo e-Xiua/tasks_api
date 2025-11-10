@@ -7,7 +7,6 @@ import com.eXiua.tasksi.model.TaskPriority;
 import com.eXiua.tasksi.model.TasksStatus;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public class TaskDTO {
@@ -21,7 +20,6 @@ public class TaskDTO {
     @Size(max = 4000)
     public String description;
 
-    @NotNull
     public TasksStatus status;
 
     public TaskPriority priority;

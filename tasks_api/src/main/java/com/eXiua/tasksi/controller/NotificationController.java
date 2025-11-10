@@ -1,7 +1,5 @@
 package com.eXiua.tasksi.controller;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,10 +30,14 @@ public class NotificationController {
         notificationService.send(recipientId, message, type);
     }
 
-    // Listar notificaciones por usuario
+    // Listar notificaciones por usuario (paginado)
     @GetMapping("/{recipientId}")
-    public List<NotificationDto> getNotificationsByRecipient(@PathVariable String recipientId) {
-        return notificationService.getByRecipient(recipientId);
+    public org.springframework.data.domain.Page<NotificationDto> getNotificationsByRecipient(
+            @PathVariable String recipientId,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size
+    ) {
+        return notificationService.getByRecipient(recipientId, page, size);
     }
 
     // Marcar una notificación como leída

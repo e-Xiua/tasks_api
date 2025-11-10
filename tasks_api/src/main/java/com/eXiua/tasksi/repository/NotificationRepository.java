@@ -8,4 +8,5 @@ import com.eXiua.tasksi.model.Notification;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     List<Notification> findByRecipientIdOrderByCreatedAtDesc(String recipientId);
+    org.springframework.data.domain.Page<Notification> findByRecipientIdOrderByCreatedAtDesc(String recipientId, org.springframework.data.domain.Pageable pageable);
 }

@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -42,7 +41,16 @@ public class TaskServiceImpl implements TaskService {
         Task t = taskMapper.toEntity(d);
         if (t != null) return t;
         Task t2 = new Task();
-        BeanUtils.copyProperties(d, t2);
+        // copy only non-null properties from DTO to avoid overwriting entity defaults
+        if (d.getTitle() != null) t2.setTitle(d.getTitle());
+        if (d.getDescription() != null) t2.setDescription(d.getDescription());
+        if (d.getStatus() != null) t2.setStatus(d.getStatus());
+        if (d.getPriority() != null) t2.setPriority(d.getPriority());
+        if (d.getResponsibleId() != null) t2.setResponsibleId(d.getResponsibleId());
+        if (d.getResponsibleName() != null) t2.setResponsibleName(d.getResponsibleName());
+        if (d.getProject() != null) t2.setProject(d.getProject());
+        if (d.getDueDate() != null) t2.setDueDate(d.getDueDate());
+        if (d.getProgress() != null) t2.setProgress(d.getProgress());
         return t2;
     }
 
@@ -50,6 +58,10 @@ public class TaskServiceImpl implements TaskService {
     @Transactional
     public TaskDTO create(TaskDTO dto, String actorId) {
         Task t = fromDTO(dto);
+        // apply default status if not provided
+        if (t.getStatus() == null) {
+            t.setStatus(com.eXiua.tasksi.model.TasksStatus.TODO);
+        }
         Task saved = taskRepository.save(t);
         TaskHistory h = new TaskHistory();
         h.setTaskId(saved.getId());
@@ -147,7 +159,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TaskDTO> search(String status, String priority, String responsibleId, String project, LocalDate dueFrom, LocalDate dueTo, Pageable pageable) {
+    public Page<TaskDTO> search(com.eXiua.tasksi.model.TasksStatus status, com.eXiua.tasksi.model.TaskPriority priority, String responsibleId, String project, LocalDate dueFrom, LocalDate dueTo, Pageable pageable) {
         Specification<Task> spec = (root, query, cb) -> {
             List<Predicate> preds = new ArrayList<>();
             if (status != null) preds.add(cb.equal(root.get("status"), status));

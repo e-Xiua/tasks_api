@@ -1,0 +1,42 @@
+<!-- Minimal TaskListComponent template (clean) -->
+<section class="task-shell">
+	<header class="toolbar">
+		<div class="search">
+			<input
+				type="search"
+				placeholder="Buscar tareas por nombre..."
+				[ngModel]="query()"
+				(ngModelChange)="query.set($event)"
+				aria-label="Buscar tareas"
+			/>
+			<button class="btn" (click)="loadTasks()" title="Actualizar">⟳</button>
+		</div>
+		<div class="actions">
+			<button class="btn primary" (click)="editing.set(null); resetForm();">+ Nueva tarea</button>
+		</div>
+	</header>
+
+	<!-- Inline create/edit (minimal) -->
+	<section class="new-task-panel">
+		<form class="panel" (submit)="$event.preventDefault(); saveTask()">
+			<input [(ngModel)]="form().name" (ngModelChange)="updateFormField('name',$event)" placeholder="Nombre de la tarea" required />
+			<input [(ngModel)]="form().responsible" (ngModelChange)="updateFormField('responsible',$event)" placeholder="Responsable" />
+			<div class="form-actions">
+				<button class="btn primary" type="submit">{{ editing() ? 'Guardar' : 'Crear' }}</button>
+				<button class="btn" type="button" (click)="cancelEdit()">Cancelar</button>
+			</div>
+		</form>
+	</section>
+
+	<!-- Simple list -->
+	<section class="list">
+		<ul>
+			<li *ngFor="let t of visibleTasks()">
+				<strong>{{ t.name }}</strong>
+				<span class="muted"> — {{ t.responsible || '—' }}</span>
+				<button class="btn" (click)="editTask(t)">Editar</button>
+				<button class="btn danger" (click)="deleteTask(t)">Eliminar</button>
+			</li>
+		</ul>
+	</section>
+</section>

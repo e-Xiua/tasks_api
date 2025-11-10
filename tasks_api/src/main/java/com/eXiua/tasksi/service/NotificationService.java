@@ -25,8 +25,9 @@ public class NotificationService {
         notificationRepository.save(notif);
     }
 
-    public java.util.List<NotificationDto> getByRecipient(String recipientId) {
-        return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId).stream().map(notificationMapper::toDto).toList();
+    public org.springframework.data.domain.Page<NotificationDto> getByRecipient(String recipientId, int page, int size) {
+        org.springframework.data.domain.Pageable p = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId, p).map(notificationMapper::toDto);
     }
 
     @Transactional

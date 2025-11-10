@@ -59,8 +59,8 @@ public class TaskController {
 
     @GetMapping
     public Page<TaskDTO> list(
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) com.eXiua.tasksi.model.TasksStatus status,
+            @RequestParam(required = false) com.eXiua.tasksi.model.TaskPriority priority,
             @RequestParam(required = false) String responsibleId,
             @RequestParam(required = false) String project,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueFrom,

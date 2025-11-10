@@ -73,6 +73,15 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Add mockito-inline to provide inline mock-maker and avoid self-attaching warnings -->
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-inline</artifactId>
+			<version>5.17.0</version>
+			<scope>test</scope>
+		</dependency>
+
+
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-stream-test-binder</artifactId>
@@ -98,6 +107,17 @@
 
 <build>
 	<plugins>
+			<!-- Configure surefire to pass a JVM flag that allows dynamic agent loading during tests.
+			     This reduces the JVM/agent warnings printed when Mockito/ByteBuddy attaches agents at runtime.
+			     It's a dev/test-time flag only and scoped to the surefire plugin. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<argLine>-XX:+EnableDynamicAgentLoading</argLine>
+				</configuration>
+			</plugin>
 		<plugin>
 			<groupId>org.apache.maven.plugins</groupId>
 			<artifactId>maven-compiler-plugin</artifactId>

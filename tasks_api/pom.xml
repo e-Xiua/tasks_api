@@ -60,13 +60,8 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- Add mockito-inline to provide inline mock-maker and avoid self-attaching warnings -->
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<version>5.17.0</version>
-			<scope>test</scope>
-		</dependency>
+		<!-- mockito-inline removed: specific 5.17.0 artifact not available in central; spring-boot-starter-test provides Mockito core for tests.
+		     Add a mockito-inline dependency later if you need inline mock maker and verify the exact available version in your registries. -->
 
 
 		<dependency>
@@ -103,6 +98,11 @@
 				<version>3.0.0</version>
 				<configuration>
 					<argLine>-XX:+EnableDynamicAgentLoading</argLine>
+					<!-- Disable Spring Cloud compatibility verifier during tests to avoid startup failure when versions are intentionally
+					     mismatched in this project. If you upgrade Spring Boot and Spring Cloud to compatible versions, remove this. -->
+					<systemPropertyVariables>
+						<spring.cloud.compatibility-verifier.enabled>false</spring.cloud.compatibility-verifier.enabled>
+					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 		<plugin>

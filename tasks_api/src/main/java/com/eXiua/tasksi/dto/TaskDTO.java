@@ -6,26 +6,38 @@ import java.time.LocalDateTime;
 import com.eXiua.tasksi.model.TaskPriority;
 import com.eXiua.tasksi.model.TasksStatus;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 public class TaskDTO {
 
     public Long id;
+
+    @NotBlank
+    @Size(max = 255)
     public String title;
+
+    @Size(max = 4000)
     public String description;
+
+    @NotNull
     public TasksStatus status;
+
     public TaskPriority priority;
+
     public String responsibleId;
     public String responsibleName;
+
     public String project;
     public Integer progress;
+
     public LocalDate dueDate;
     public LocalDateTime createdAt;
     public LocalDateTime updatedAt;
 
-    // Getters and Setters (or use Lombok for brevity)
+    public TaskDTO() {}
 
-public TaskDTO() {}
-
-    // getters y setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

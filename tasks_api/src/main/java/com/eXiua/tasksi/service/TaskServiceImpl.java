@@ -11,7 +11,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.eXiua.tasksi.dto.TaskDTO;
 import com.eXiua.tasksi.model.Task;
@@ -27,20 +30,24 @@ public class TaskServiceImpl implements TaskService {
     @Autowired private TaskRepository taskRepository;
     @Autowired private TaskHistoryRepository historyRepository;
     @Autowired private NotificationService notificationService;
+    @Autowired private org.springframework.context.ApplicationEventPublisher publisher;
+    @Autowired private com.eXiua.tasksi.mapper.TaskMapper taskMapper;
+    @Autowired private com.eXiua.tasksi.repository.MessageRepository messageRepository;
 
     private TaskDTO toDTO(Task t) {
-        TaskDTO d = new TaskDTO();
-        BeanUtils.copyProperties(t, d);
-        return d;
+        return taskMapper.toDto(t);
     }
 
     private Task fromDTO(TaskDTO d) {
-        Task t = new Task();
-        BeanUtils.copyProperties(d, t);
-        return t;
+        Task t = taskMapper.toEntity(d);
+        if (t != null) return t;
+        Task t2 = new Task();
+        BeanUtils.copyProperties(d, t2);
+        return t2;
     }
 
     @Override
+    @Transactional
     public TaskDTO create(TaskDTO dto, String actorId) {
         Task t = fromDTO(dto);
         Task saved = taskRepository.save(t);
@@ -50,10 +57,9 @@ public class TaskServiceImpl implements TaskService {
         h.setActorId(actorId);
         h.setDetails("Created task");
         historyRepository.save(h);
-        // Notify responsible user and actor (if provided)
+        // Publish assigned event instead of calling notificationService directly
         if (saved.getResponsibleId() != null && !saved.getResponsibleId().isBlank()) {
-            String msg = "Se te ha asignado la tarea: " + (saved.getTitle() != null ? saved.getTitle() : "(sin título)");
-            notificationService.send(saved.getResponsibleId(), msg, "TASK_ASSIGNED");
+            publisher.publishEvent(new com.eXiua.tasksi.events.TaskAssignedEvent(saved.getId(), saved.getResponsibleId(), saved.getTitle()));
         }
         if (actorId != null && !actorId.isBlank() && !actorId.equals(saved.getResponsibleId())) {
             String msg2 = "Has creado la tarea: " + (saved.getTitle() != null ? saved.getTitle() : "(sin título)");
@@ -63,8 +69,9 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @Transactional
     public TaskDTO update(Long id, TaskDTO dto, String actorId) {
-        Task existing = taskRepository.findById(id).orElseThrow(() -> new RuntimeException("Task not found"));
+        Task existing = taskRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
         // preserve previous values to detect changes for notifications
         String prevResponsible = existing.getResponsibleId();
         com.eXiua.tasksi.model.TasksStatus prevStatus = existing.getStatus();
@@ -86,18 +93,13 @@ public class TaskServiceImpl implements TaskService {
         h.setActorId(actorId);
         h.setDetails("Updated task");
         historyRepository.save(h);
-        // Notify if responsible changed
+        // Publish events for responsible change and status change
         if (dto.responsibleId != null && !dto.responsibleId.isBlank() && (prevResponsible == null || !prevResponsible.equals(dto.responsibleId))) {
-            String msg = "Se te ha asignado la tarea: " + (saved.getTitle() != null ? saved.getTitle() : "(sin título)");
-            notificationService.send(dto.responsibleId, msg, "TASK_ASSIGNED");
+            publisher.publishEvent(new com.eXiua.tasksi.events.TaskAssignedEvent(saved.getId(), dto.responsibleId, saved.getTitle()));
         }
-        // Notify when status changed
         if (prevStatus == null || !prevStatus.equals(saved.getStatus())) {
             String responsible = saved.getResponsibleId();
-            if (responsible != null && !responsible.isBlank()) {
-                String msg = "El estado de la tarea '" + (saved.getTitle() != null ? saved.getTitle() : "(sin título)") + "' cambió a " + saved.getStatus();
-                notificationService.send(responsible, msg, "TASK_STATUS_CHANGED");
-            }
+            publisher.publishEvent(new com.eXiua.tasksi.events.TaskStatusChangedEvent(saved.getId(), responsible, saved.getStatus(), saved.getTitle()));
             if (actorId != null && !actorId.isBlank() && !actorId.equals(responsible)) {
                 String msg2 = "Has actualizado el estado de la tarea '" + (saved.getTitle() != null ? saved.getTitle() : "(sin título)") + "' a " + saved.getStatus();
                 notificationService.send(actorId, msg2, "TASK_UPDATED_CONFIRMATION");
@@ -107,8 +109,9 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @Transactional
     public void delete(Long id, String actorId) {
-        Task t = taskRepository.findById(id).orElseThrow(() -> new RuntimeException("Task not found"));
+        Task t = taskRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
         taskRepository.delete(t);
         TaskHistory h = new TaskHistory();
         h.setTaskId(id);
@@ -119,11 +122,31 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TaskDTO findById(Long id) {
-        return taskRepository.findById(id).map(this::toDTO).orElse(null);
+        return taskRepository.findById(id).map(this::toDTO).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public com.eXiua.tasksi.dto.TaskDetailDto findDetailById(Long id) {
+        Task t = taskRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+        java.util.List<com.eXiua.tasksi.dto.MessageDto> msgs = messageRepository.findByTaskIdOrderByTimestampAsc(id).stream().map(m -> {
+            com.eXiua.tasksi.dto.MessageDto md = new com.eXiua.tasksi.dto.MessageDto();
+            md.id = m.getId();
+            md.taskId = m.getTask() != null ? m.getTask().getId() : null;
+            md.senderId = m.getSenderId();
+            md.receiverId = m.getReceiverId();
+            md.content = m.getContent();
+            md.timestamp = m.getTimestamp();
+            md.readFlag = m.isReadFlag();
+            return md;
+        }).toList();
+        return taskMapper.toDetailDto(t, msgs);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<TaskDTO> search(String status, String priority, String responsibleId, String project, LocalDate dueFrom, LocalDate dueTo, Pageable pageable) {
         Specification<Task> spec = (root, query, cb) -> {
             List<Predicate> preds = new ArrayList<>();
@@ -142,7 +165,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-public Object kpis() {
+    @Transactional(readOnly = true)
+    public Object kpis() {
     java.util.Map<String, Object> result = new java.util.HashMap<>();
 
     // --- GENERAL ---

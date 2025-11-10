@@ -12,6 +12,7 @@ public interface TaskService {
     TaskDTO update(Long id, TaskDTO dto, String actorId);
     void delete(Long id, String actorId);
     TaskDTO findById(Long id);
+    com.eXiua.tasksi.dto.TaskDetailDto findDetailById(Long id);
     Page<TaskDTO> search(String status, String priority, String responsibleId, String project, LocalDate dueFrom, LocalDate dueTo, Pageable pageable);
     // KPI / Summaries
     Object kpis();

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.eXiua.tasksi.model.Notification;
+import com.eXiua.tasksi.dto.NotificationDto;
 import com.eXiua.tasksi.service.NotificationService;
 
 @RestController
@@ -34,7 +34,7 @@ public class NotificationController {
 
     // Listar notificaciones por usuario
     @GetMapping("/{recipientId}")
-    public List<Notification> getNotificationsByRecipient(@PathVariable String recipientId) {
+    public List<NotificationDto> getNotificationsByRecipient(@PathVariable String recipientId) {
         return notificationService.getByRecipient(recipientId);
     }
 

@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.eXiua.tasksi.dto.TaskDTO;
 import com.eXiua.tasksi.service.TaskService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/tasks")
 @CrossOrigin(origins = "*") // temporal, acotar a dominio front en producción
@@ -31,12 +33,12 @@ public class TaskController {
     @Autowired private TaskService taskService;
 
     @PostMapping
-    public TaskDTO create(@RequestBody TaskDTO dto, @RequestHeader(value = "X-Actor-Id", required = false) String actorId) {
+    public TaskDTO create(@Valid @RequestBody TaskDTO dto, @RequestHeader(value = "X-Actor-Id", required = false) String actorId) {
         return taskService.create(dto, actorId);
     }
 
     @PutMapping("/{id}")
-    public TaskDTO update(@PathVariable Long id, @RequestBody TaskDTO dto, @RequestHeader(value = "X-Actor-Id", required = false) String actorId) {
+    public TaskDTO update(@PathVariable Long id, @Valid @RequestBody TaskDTO dto, @RequestHeader(value = "X-Actor-Id", required = false) String actorId) {
         return taskService.update(id, dto, actorId);
     }
 
@@ -48,6 +50,11 @@ public class TaskController {
     @GetMapping("/{id}")
     public TaskDTO getById(@PathVariable Long id) {
         return taskService.findById(id);
+    }
+
+    @GetMapping("/{id}/detail")
+    public com.eXiua.tasksi.dto.TaskDetailDto getDetailById(@PathVariable Long id) {
+        return taskService.findDetailById(id);
     }
 
     @GetMapping

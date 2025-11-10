@@ -125,93 +125,12 @@
 	<!-- Frontend plugin moved to optional profile 'frontend' (not active by default)
 		 to avoid build errors when the frontend/frontend-app directory is not present -->
 
-	<!-- Copy built frontend into backend classes using Ant (allows sibling-folder access) -->
-	<plugin>
-		<groupId>org.apache.maven.plugins</groupId>
-		<artifactId>maven-antrun-plugin</artifactId>
-		<version>3.1.0</version>
-		<executions>
-			<execution>
-				<?m2e execute onConfiguration?>
-				<id>copy-frontend-dist</id>
-				<phase>process-resources</phase>
-				<goals>
-					<goal>run</goal>
-				</goals>
-				<configuration>
-					<target>
-						<mkdir dir="${project.build.outputDirectory}/static" />
-						<copy todir="${project.build.outputDirectory}/static" overwrite="true">
-							<fileset dir="${project.basedir}/../frontend/frontend-app/dist/frontend-app" />
-						</copy>
-					</target>
-				</configuration>
-			</execution>
-		</executions>
-	</plugin>
+	<!-- No frontend copy step: frontend is maintained in a separate repository now.
+	     This backend module contains only business logic and exposes the API.
+	     If you need an automated copy, re-add an appropriate plugin or profile. -->
 	</plugins>
 </build>
 
-<profiles>
-		<profile>
-			<id>frontend</id>
-			<activation>
-				<!-- Activate frontend build by default so 'mvn spring-boot:run' will
-					 build the Angular app and copy the assets before starting the backend -->
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<build>
-				<plugins>
-					<!-- Ejecuta npm install y npm run build en frontend/frontend-app -->
-					<plugin>
-						<groupId>com.github.eirslett</groupId>
-						<artifactId>frontend-maven-plugin</artifactId>
-						<version>1.12.1</version>
-						<executions>
-							<execution>
-								<id>install node and npm</id>
-								<goals>
-									<goal>install-node-and-npm</goal>
-								</goals>
-								<configuration>
-									<nodeVersion>v20.19.0</nodeVersion>
-									<npmVersion>9.8.0</npmVersion>
-									<!-- install node inside the frontend working directory so the
-										 subsequent npm executions find the local node binary -->
-									<workingDirectory>../frontend/frontend-app</workingDirectory>
-								</configuration>
-							</execution>
-
-							<execution>
-								<id>npm install</id>
-								<goals>
-									<goal>npm</goal>
-								</goals>
-								<phase>generate-resources</phase>
-								<configuration>
-									<arguments>install</arguments>
-									<!-- frontend lives next to the backend module -->
-									<workingDirectory>../frontend/frontend-app</workingDirectory>
-								</configuration>
-							</execution>
-
-							<execution>
-								<id>npm run build</id>
-								<goals>
-									<goal>npm</goal>
-								</goals>
-								<phase>generate-resources</phase>
-								<configuration>
-									<arguments>run build --silent</arguments>
-									<!-- build from the sibling frontend folder -->
-									<workingDirectory>../frontend/frontend-app</workingDirectory>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-	</profiles>
+<!-- Frontend build integration removed. Frontend is now in a separate repository. -->
 
 </project>

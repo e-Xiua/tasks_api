@@ -26,6 +26,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Autowired private TaskRepository taskRepository;
     @Autowired private TaskHistoryRepository historyRepository;
+    @Autowired private NotificationService notificationService;
 
     private TaskDTO toDTO(Task t) {
         TaskDTO d = new TaskDTO();
@@ -49,12 +50,25 @@ public class TaskServiceImpl implements TaskService {
         h.setActorId(actorId);
         h.setDetails("Created task");
         historyRepository.save(h);
+        // Notify responsible user and actor (if provided)
+        if (saved.getResponsibleId() != null && !saved.getResponsibleId().isBlank()) {
+            String msg = "Se te ha asignado la tarea: " + (saved.getTitle() != null ? saved.getTitle() : "(sin título)");
+            notificationService.send(saved.getResponsibleId(), msg, "TASK_ASSIGNED");
+        }
+        if (actorId != null && !actorId.isBlank() && !actorId.equals(saved.getResponsibleId())) {
+            String msg2 = "Has creado la tarea: " + (saved.getTitle() != null ? saved.getTitle() : "(sin título)");
+            notificationService.send(actorId, msg2, "TASK_CREATED_CONFIRMATION");
+        }
         return toDTO(saved);
     }
 
     @Override
     public TaskDTO update(Long id, TaskDTO dto, String actorId) {
         Task existing = taskRepository.findById(id).orElseThrow(() -> new RuntimeException("Task not found"));
+        // preserve previous values to detect changes for notifications
+        String prevResponsible = existing.getResponsibleId();
+        com.eXiua.tasksi.model.TasksStatus prevStatus = existing.getStatus();
+
         // copy only allowed fields
         existing.setTitle(dto.title);
         existing.setDescription(dto.description);
@@ -72,6 +86,23 @@ public class TaskServiceImpl implements TaskService {
         h.setActorId(actorId);
         h.setDetails("Updated task");
         historyRepository.save(h);
+        // Notify if responsible changed
+        if (dto.responsibleId != null && !dto.responsibleId.isBlank() && (prevResponsible == null || !prevResponsible.equals(dto.responsibleId))) {
+            String msg = "Se te ha asignado la tarea: " + (saved.getTitle() != null ? saved.getTitle() : "(sin título)");
+            notificationService.send(dto.responsibleId, msg, "TASK_ASSIGNED");
+        }
+        // Notify when status changed
+        if (prevStatus == null || !prevStatus.equals(saved.getStatus())) {
+            String responsible = saved.getResponsibleId();
+            if (responsible != null && !responsible.isBlank()) {
+                String msg = "El estado de la tarea '" + (saved.getTitle() != null ? saved.getTitle() : "(sin título)") + "' cambió a " + saved.getStatus();
+                notificationService.send(responsible, msg, "TASK_STATUS_CHANGED");
+            }
+            if (actorId != null && !actorId.isBlank() && !actorId.equals(responsible)) {
+                String msg2 = "Has actualizado el estado de la tarea '" + (saved.getTitle() != null ? saved.getTitle() : "(sin título)") + "' a " + saved.getStatus();
+                notificationService.send(actorId, msg2, "TASK_UPDATED_CONFIRMATION");
+            }
+        }
         return toDTO(saved);
     }
 

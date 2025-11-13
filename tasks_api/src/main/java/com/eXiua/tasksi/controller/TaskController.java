@@ -72,6 +72,16 @@ public class TaskController {
         return taskService.search(status, priority, responsibleId, project, dueFrom, dueTo, p);
     }
 
+    @GetMapping("/all")
+    public java.util.List<TaskDTO> listAll(
+            @RequestParam(required = false) com.eXiua.tasksi.model.TasksStatus status,
+            @RequestParam(required = false) com.eXiua.tasksi.model.TaskPriority priority,
+            @RequestParam(required = false) String responsibleId,
+            @RequestParam(required = false) String project
+    ) {
+        return taskService.findAll(status, priority, responsibleId, project);
+    }
+
     @GetMapping("/kpis")
     public Object kpis() {
         return taskService.kpis();

@@ -178,6 +178,22 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<TaskDTO> findAll(com.eXiua.tasksi.model.TasksStatus status, com.eXiua.tasksi.model.TaskPriority priority, String responsibleId, String project) {
+        Specification<Task> spec = (root, query, cb) -> {
+            List<Predicate> preds = new ArrayList<>();
+            if (status != null) preds.add(cb.equal(root.get("status"), status));
+            if (priority != null) preds.add(cb.equal(root.get("priority"), priority));
+            if (responsibleId != null) preds.add(cb.equal(root.get("responsibleId"), responsibleId));
+            if (project != null) preds.add(cb.equal(root.get("project"), project));
+            return cb.and(preds.toArray(Predicate[]::new));
+        };
+
+        List<Task> tasks = taskRepository.findAll(spec);
+        return tasks.stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Object kpis() {
     java.util.Map<String, Object> result = new java.util.HashMap<>();
 
